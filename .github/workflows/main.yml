@@ -9,19 +9,24 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          # إضافة المترجم الخاص بـ ARM64
-          sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+          # إضافة كل المكتبات الممكنة لتجنب انقطاع البناء
+          sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev \
+          gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu mkbootimg \
+          python3 python-is-python3 libncurses-dev
 
       - name: Build Kernel
         run: |
           chmod +x build_kernel.sh
-          # توجيه البناء لاستخدام المترجم العابر للمعماريات
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
+          # التأكد من نظافة المجلد قبل البدء
+          make clean
           ./build_kernel.sh
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: Droidian-Kernel-A21s
-          path: out/*.zip
+          path: |
+            out/*.zip
+            arch/arm64/boot/Image*
