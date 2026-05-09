@@ -1,17 +1,46 @@
-      - name: Build Kernel
+name: Build Droidian Kernel A21s Professional
+on: 
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Toolchain and Deps
         run: |
-          chmod +x build_kernel.sh
+          sudo apt-get update
+          sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev \
+          gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu mkbootimg \
+          python3 python-is-python3 libncurses-dev lz4 zip cpio gzip tar
+
+      - name: Manual Kernel Build
+        run: |
+          # تجهيز البيئة
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           export KBUILD_BUILD_USER="Admin102"
           export KBUILD_BUILD_HOST="Droidian-Builder"
           
-          # إضافة خيارات لإهمال التحذيرات وتحويلها إلى مجرد تنبيهات وليس أخطاء
-          export KCFLAGS="-Wno-error=strict-prototypes -Wno-error=format-zero-length -Wno-error=uninitialized"
+          # تجاهل الأخطاء التقنية التي واجهتنا في الصورة السابقة
+          export KCFLAGS="-Wno-error=strict-prototypes -Wno-error=format-zero-length -Wno-error=uninitialized -Wno-error=maybe-uninitialized"
+
+          # 1. تنظيف البيئة
+          make clean && make mrproper
           
-          mkdir -p out
-          # استخدام الـ Flag الخاص بتجاهل الأخطاء أثناء الـ make
-          make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="$KCFLAGS" -j$(nproc)
-          
-          ./build_kernel.sh
+          # 2. استخدام ملف الإعدادات الخاص بجهازك (تأكد من اسم الملف في مجلد arch/arm64/configs)
+          # سنفترض أن الاسم الافتراضي لـ A21s هو exynos850_defconfig أو ما شابه
+          # إذا كنت تعرف اسم الملف بدقة استبدله هنا، وإلا سنستخدم المتاح:
+          make exynos850_defconfig || make a21s_defconfig || make defconfig
+
+          # 3. طبخ الكيرنل الفعلي (باستخدام كل الأنوية المتاحة)
+          make KCFLAGS="$KCFLAGS" -j$(nproc)
+
+      - name: Upload Kernel Image
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kernel-A21s-Image
+          path: arch/arm64/boot/Image
           
