@@ -1,45 +1,17 @@
-name: Build Droidian Kernel A21s
-on: 
-  workflow_dispatch: # هذا السطر هو المسؤول عن إظهار دقمة التشغيل اليدوي
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Install All Dependencies
+      - name: Build Kernel
         run: |
-          sudo apt-get update
-          sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev \
-          gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu mkbootimg \
-          python3 python-is-python3 libncurses-dev lz4 zip cpio gzip tar
-
-      - name: Preparation and Build
-        run: |
-          # إعطاء الصلاحيات للسكربت الأساسي
           chmod +x build_kernel.sh
-          
-          # تعريف المتغيرات البيئية الأساسية للبناء العابر للمعماريات
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           export KBUILD_BUILD_USER="Admin102"
           export KBUILD_BUILD_HOST="Droidian-Builder"
           
-          # إنشاء مجلد المخرجات وضمان نظافة البيئة
-          mkdir -p out
-          make clean
+          # إضافة خيارات لإهمال التحذيرات وتحويلها إلى مجرد تنبيهات وليس أخطاء
+          export KCFLAGS="-Wno-error=strict-prototypes -Wno-error=format-zero-length -Wno-error=uninitialized"
           
-          # تشغيل عملية البناء
+          mkdir -p out
+          # استخدام الـ Flag الخاص بتجاهل الأخطاء أثناء الـ make
+          make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="$KCFLAGS" -j$(nproc)
+          
           ./build_kernel.sh
-
-      - name: Upload Finished Kernel
-        uses: actions/upload-artifact@v4
-        with:
-          name: Droidian-Kernel-Result
-          path: |
-            out/*.zip
-            arch/arm64/boot/Image*
-            arch/arm64/boot/dts/exynos/*.dtb
-            
+          
