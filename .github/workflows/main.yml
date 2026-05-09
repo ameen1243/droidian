@@ -4,18 +4,24 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4 # تحديث للنسخة 4
+      - uses: actions/checkout@v4
+      
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev
+          # إضافة المترجم الخاص بـ ARM64
+          sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
       - name: Build Kernel
         run: |
           chmod +x build_kernel.sh
+          # توجيه البناء لاستخدام المترجم العابر للمعماريات
+          export ARCH=arm64
+          export CROSS_COMPILE=aarch64-linux-gnu-
           ./build_kernel.sh
+
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4 # التحديث المطلوب للنسخة 4
+        uses: actions/upload-artifact@v4
         with:
           name: Droidian-Kernel-A21s
           path: out/*.zip
-          
