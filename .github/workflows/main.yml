@@ -1,51 +1,28 @@
-name: Droidian Porting Final Attempt
-on: 
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Your Fork
-        uses: actions/checkout@v4
-
-      - name: Install Dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev \
-          gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu mkbootimg \
-          python3 python-is-python3 libncurses-dev lz4 zip cpio gzip tar git
-
       - name: Droidian Kernel Patching & Build
         run: |
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
           export KCFLAGS="-Wno-error"
           
-          # 1. تنظيف وتجهيز الإعدادات
-          # تأكد أنك داخل مجلد السورس في الفورك الخاص بك
-          make clean
-          # سنحاول استخدام الـ defconfig الأكثر شيوعاً لجهاز A21s
-          make exynos850_defconfig || make a21s_defconfig || make defconfig
+          # 1. إصلاح خطأ سامسونج برمجياً (تعطيل الـ Debug المسبب للخطأ)
+          sed -i 's/current->x = x;/ \/\/ current->x = x;/g' include/linux/sec_debug_complete_hint.h
+          sed -i 's/current->x = 0;/ \/\/ current->x = 0;/g' include/linux/sec_debug_complete_hint.h
           
-          # 2. تطبيق تعليمات الـ Porting Guide آلياً (تفعيل LXC و AppArmor)
-          # هذه الأوامر هي جوهر القايد الذي أرسلته
+          # 2. تنظيف وتجهيز الإعدادات
+          make clean
+          # سنستخدم أمر البحث لنجد أي ملف ينتهي بـ _defconfig ونختاره آلياً
+          CONF_FILE=$(find arch/arm64/configs/ -name "*defconfig" | head -n 1 | xargs basename)
+          echo "Selected Config: $CONF_FILE"
+          make $CONF_FILE
+          
+          # 3. تطبيق تعليمات الـ Porting Guide
           scripts/config --enable CONFIG_NAMESPACES
           scripts/config --enable CONFIG_CGROUPS
           scripts/config --enable CONFIG_LXC_BRIDGE
           scripts/config --enable CONFIG_APPMARMOR
+          scripts/config --disable CONFIG_SECURITY_SELINUX 
           scripts/config --enable CONFIG_ANDROID_BINDER_IPC
-          scripts/config --enable CONFIG_IKCONFIG
-          scripts/config --enable CONFIG_IKCONFIG_PROC
           
-          # 3. طبخ الكيرنل الفعلي
+          # 4. طبخ الكيرنل
           make KCFLAGS="$KCFLAGS" -j$(nproc)
-
-      - name: Upload Finished Kernel
-        uses: actions/upload-artifact@v4
-        with:
-          name: Droidian-A21s-Kernel-Final
-          path: |
-            arch/arm64/boot/Image
-            .config
-            
+          
