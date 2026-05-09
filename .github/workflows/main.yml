@@ -1,32 +1,15 @@
-name: Build Droidian Kernel
-on: [workflow_dispatch]
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          # إضافة كل المكتبات الممكنة لتجنب انقطاع البناء
           sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev \
           gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu mkbootimg \
-          python3 python-is-python3 libncurses-dev
+          python3 python-is-python3 libncurses-dev lz4 zip cpio # أضفنا أدوات الضغط
 
       - name: Build Kernel
         run: |
           chmod +x build_kernel.sh
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          # التأكد من نظافة المجلد قبل البدء
-          make clean
+          mkdir -p out # نضمن وجود مجلد المخرجات
           ./build_kernel.sh
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Droidian-Kernel-A21s
-          path: |
-            out/*.zip
-            arch/arm64/boot/Image*
+          
