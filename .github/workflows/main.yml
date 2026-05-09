@@ -1,4 +1,4 @@
-name: Build Droidian Kernel A21s Professional
+name: Droidian Porting Final Attempt
 on: 
   workflow_dispatch:
 
@@ -6,41 +6,46 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout Your Fork
         uses: actions/checkout@v4
 
-      - name: Install Toolchain and Deps
+      - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev \
           gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu mkbootimg \
-          python3 python-is-python3 libncurses-dev lz4 zip cpio gzip tar
+          python3 python-is-python3 libncurses-dev lz4 zip cpio gzip tar git
 
-      - name: Manual Kernel Build
+      - name: Droidian Kernel Patching & Build
         run: |
-          # تجهيز البيئة
           export ARCH=arm64
           export CROSS_COMPILE=aarch64-linux-gnu-
-          export KBUILD_BUILD_USER="Admin102"
-          export KBUILD_BUILD_HOST="Droidian-Builder"
+          export KCFLAGS="-Wno-error"
           
-          # تجاهل الأخطاء التقنية التي واجهتنا في الصورة السابقة
-          export KCFLAGS="-Wno-error=strict-prototypes -Wno-error=format-zero-length -Wno-error=uninitialized -Wno-error=maybe-uninitialized"
-
-          # 1. تنظيف البيئة
-          make clean && make mrproper
-          
-          # 2. استخدام ملف الإعدادات الخاص بجهازك (تأكد من اسم الملف في مجلد arch/arm64/configs)
-          # سنفترض أن الاسم الافتراضي لـ A21s هو exynos850_defconfig أو ما شابه
-          # إذا كنت تعرف اسم الملف بدقة استبدله هنا، وإلا سنستخدم المتاح:
+          # 1. تنظيف وتجهيز الإعدادات
+          # تأكد أنك داخل مجلد السورس في الفورك الخاص بك
+          make clean
+          # سنحاول استخدام الـ defconfig الأكثر شيوعاً لجهاز A21s
           make exynos850_defconfig || make a21s_defconfig || make defconfig
-
-          # 3. طبخ الكيرنل الفعلي (باستخدام كل الأنوية المتاحة)
+          
+          # 2. تطبيق تعليمات الـ Porting Guide آلياً (تفعيل LXC و AppArmor)
+          # هذه الأوامر هي جوهر القايد الذي أرسلته
+          scripts/config --enable CONFIG_NAMESPACES
+          scripts/config --enable CONFIG_CGROUPS
+          scripts/config --enable CONFIG_LXC_BRIDGE
+          scripts/config --enable CONFIG_APPMARMOR
+          scripts/config --enable CONFIG_ANDROID_BINDER_IPC
+          scripts/config --enable CONFIG_IKCONFIG
+          scripts/config --enable CONFIG_IKCONFIG_PROC
+          
+          # 3. طبخ الكيرنل الفعلي
           make KCFLAGS="$KCFLAGS" -j$(nproc)
 
-      - name: Upload Kernel Image
+      - name: Upload Finished Kernel
         uses: actions/upload-artifact@v4
         with:
-          name: Kernel-A21s-Image
-          path: arch/arm64/boot/Image
-          
+          name: Droidian-A21s-Kernel-Final
+          path: |
+            arch/arm64/boot/Image
+            .config
+            
