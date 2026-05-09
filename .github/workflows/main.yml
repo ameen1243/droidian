@@ -1,0 +1,21 @@
+name: Build Droidian Kernel
+on: [workflow_dispatch]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc build-essential flex bison libssl-dev libelf-dev
+      - name: Build Kernel
+        run: |
+          chmod +x build_kernel.sh
+          ./build_kernel.sh
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Droidian-Kernel-A21s
+          path: out/*.zip
+          
